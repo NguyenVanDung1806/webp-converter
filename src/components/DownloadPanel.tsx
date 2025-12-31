@@ -19,9 +19,12 @@ export function DownloadPanel({ images, onClearAll }: DownloadPanelProps) {
     setIsDownloading(true);
     try {
       await downloadAllAsZip(completedImages);
+      // Show success message
+      console.log('ZIP download started successfully');
     } catch (error) {
       console.error('Download error:', error);
-      alert('Failed to create ZIP file. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to create ZIP file: ${errorMessage}\n\nPlease try:\n1. Downloading images individually\n2. Refreshing the page\n3. Using a different browser`);
     } finally {
       setIsDownloading(false);
     }

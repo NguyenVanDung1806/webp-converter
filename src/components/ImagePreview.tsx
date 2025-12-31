@@ -15,8 +15,11 @@ export function ImagePreview({ images, onRemove }: ImagePreviewProps) {
   const handleDownload = (image: ImageFile) => {
     try {
       downloadSingleImage(image);
+      console.log(`Download started for: ${image.file.name}`);
     } catch (error) {
       console.error('Download error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to download image: ${errorMessage}`);
     }
   };
 
