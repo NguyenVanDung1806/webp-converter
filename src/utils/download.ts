@@ -13,8 +13,9 @@ export function downloadFile(blob: Blob, filename: string): void {
     console.log(`Blob type: ${blob.type}`);
     
     // Verify blob is valid
-    if (blob.size === 0) {
-      throw new Error('Blob is empty - conversion may have failed');
+    if (!blob || blob.size === 0) {
+      console.error('Invalid blob encountered');
+      throw new Error('Blob is empty or invalid - conversion may have failed');
     }
     
     // Create blob URL
@@ -27,21 +28,22 @@ export function downloadFile(blob: Blob, filename: string): void {
     link.download = filename;
     link.style.display = 'none';
     
-    // Append to body, click, and cleanup
+    // Append to body
     document.body.appendChild(link);
     
     // Use a slight delay to ensure the link is in the DOM
     setTimeout(() => {
+      console.log(`Starting download for: ${filename}`);
       link.click();
-      console.log(`Download triggered for: ${filename}`);
       
-      // Cleanup after download starts
+      // CRITICAL: Wait for browser to handle the download before revoking
+      // Revoking too early causes intermittent corrupt files
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
-        console.log('Cleanup completed');
-      }, 100);
-    }, 10);
+        console.log('Cleanup completed: URL revoked');
+      }, 2000); // Wait 2 seconds
+    }, 100);
     
   } catch (error) {
     console.error('Download failed:', error);
