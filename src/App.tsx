@@ -90,7 +90,7 @@ function App() {
                 © 2025 ATS WebP Converter. All images are processed locally in your browser.
               </p>
               <p className="text-gray-500 text-xs mt-1">
-                No data is uploaded to any server. Your privacy is protected.
+                Version: 1.1.0 (Compression Fix) • No data is uploaded to any server.
               </p>
             </div>
             <div className="flex gap-4">
