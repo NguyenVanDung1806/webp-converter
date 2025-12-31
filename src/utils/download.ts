@@ -25,7 +25,13 @@ export function downloadFile(blob: Blob, filename: string): void {
     // Create temporary anchor element
     const link = document.createElement('a');
     link.href = url;
-    link.download = filename;
+    
+    // Explicitly set download attribute to force filename
+    // Using setAttribute is sometimes more reliable than property assignment
+    link.setAttribute('download', filename);
+    
+    // Optional: useful for some browsers to detect it's a download
+    link.target = '_blank';
     link.style.display = 'none';
     
     // Append to body
@@ -37,12 +43,11 @@ export function downloadFile(blob: Blob, filename: string): void {
       link.click();
       
       // CRITICAL: Wait for browser to handle the download before revoking
-      // Revoking too early causes intermittent corrupt files
       setTimeout(() => {
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
         console.log('Cleanup completed: URL revoked');
-      }, 2000); // Wait 2 seconds
+      }, 2000); // 2 seconds safety delay
     }, 100);
     
   } catch (error) {
