@@ -8,7 +8,11 @@ import { getWebPFileName } from './converter';
  */
 export function downloadFile(blob: Blob, filename: string): void {
   try {
-    console.log(`Downloading: ${filename}`);
+    // Sanitize filename to remove dangerous characters (keeps alphanumeric, dots, dashes, underscores)
+    // This prevents OS errors when saving files
+    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+    console.log(`Downloading: ${filename} (sanitized to: ${safeFilename})`);
     console.log(`Blob size: ${blob.size} bytes`);
     console.log(`Blob type: ${blob.type}`);
     
@@ -26,12 +30,10 @@ export function downloadFile(blob: Blob, filename: string): void {
     const link = document.createElement('a');
     link.href = url;
     
-    // Explicitly set download attribute to force filename
-    // Using setAttribute is sometimes more reliable than property assignment
-    link.setAttribute('download', filename);
+    // Explicitly set download attribute
+    link.setAttribute('download', safeFilename);
     
-    // Optional: useful for some browsers to detect it's a download
-    link.target = '_blank';
+    // Removed target="_blank" to prevent popup blockers from interfering
     link.style.display = 'none';
     
     // Append to body
@@ -39,15 +41,17 @@ export function downloadFile(blob: Blob, filename: string): void {
     
     // Use a slight delay to ensure the link is in the DOM
     setTimeout(() => {
-      console.log(`Starting download for: ${filename}`);
+      console.log(`Starting download for: ${safeFilename}`);
       link.click();
       
-      // CRITICAL: Wait for browser to handle the download before revoking
+      // CRITICAL: Wait 2s for browser to handle the download before revoking
       setTimeout(() => {
-        document.body.removeChild(link);
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
         window.URL.revokeObjectURL(url);
         console.log('Cleanup completed: URL revoked');
-      }, 2000); // 2 seconds safety delay
+      }, 2000); 
     }, 100);
     
   } catch (error) {
