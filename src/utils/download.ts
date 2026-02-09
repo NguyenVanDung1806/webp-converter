@@ -78,7 +78,8 @@ export async function createZip(images: ImageFile[]): Promise<Blob> {
     // Add each image to the zip
     for (const img of completedImages) {
       if (img.convertedBlob) {
-        const fileName = getWebPFileName(img.file.name);
+        // Use finalName if available (from bulk rename), otherwise use original name
+        const fileName = img.finalName || getWebPFileName(img.file.name);
         console.log(`Adding to ZIP: ${fileName} (${img.convertedBlob.size} bytes)`);
         
         // Ensure blob has correct type
@@ -124,6 +125,7 @@ export function downloadSingleImage(image: ImageFile): void {
     throw new Error('Image not ready for download');
   }
 
-  const fileName = getWebPFileName(image.file.name);
+  // Use finalName if available (from bulk rename), otherwise use original name
+  const fileName = image.finalName || getWebPFileName(image.file.name);
   downloadFile(image.convertedBlob, fileName);
 }

@@ -4,18 +4,22 @@ import { ImagePreview } from './components/ImagePreview';
 import { ProcessingQueue } from './components/ProcessingQueue';
 import { Analytics } from './components/Analytics';
 import { DownloadPanel } from './components/DownloadPanel';
+import { BulkRenameInput } from './components/BulkRenameInput';
+import { RenamePreview } from './components/RenamePreview';
 import { useImageConverter } from './hooks/useImageConverter';
 
 function App() {
   const {
     images,
     settings,
+    renameSettings,
     isProcessing,
     addImages,
     removeImage,
     clearAll,
     convertAll,
     updateSettings,
+    updateRenameSettings,
   } = useImageConverter();
 
   return (
@@ -51,6 +55,13 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-6">
+          {/* Bulk Rename Input */}
+          <BulkRenameInput 
+            settings={renameSettings}
+            onSettingsChange={updateRenameSettings}
+            imageCount={images.length}
+          />
+
           {/* File Uploader */}
           <FileUploader onFilesSelected={addImages} disabled={isProcessing} />
 
@@ -69,6 +80,9 @@ function App() {
               </div>
             </div>
           )}
+
+          {/* Rename Preview */}
+          <RenamePreview images={images} />
 
           {/* Analytics */}
           <Analytics images={images} />

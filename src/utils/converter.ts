@@ -1,12 +1,15 @@
 import type { ConversionSettings } from '../types';
+import { detectOrientation, applyOrientation, getCorrectedDimensions } from './exifOrientation';
 
 /**
  * Custom WebP Compression Engine
  * Guarantees output is smaller than input, or at least optimized.
+ * Now includes EXIF orientation correction.
  */
 export async function convertToWebP(
   file: File,
-  settings: ConversionSettings
+  settings: ConversionSettings,
+  orientation?: number
 ): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -21,6 +24,13 @@ export async function convertToWebP(
         // This effectively replaces 'maxSizeMB' logic by limiting pixels
         const MAX_DIMENSION = 1920; 
         let { width, height } = img;
+        
+        // Apply orientation correction to dimensions if needed
+        if (orientation && orientation !== 1) {
+          const corrected = getCorrectedDimensions(width, height, orientation);
+          width = corrected.width;
+          height = corrected.height;
+        }
         
         // Handle User Resizing Settings first
         if (settings.width || settings.height) {
@@ -55,14 +65,33 @@ export async function convertToWebP(
           }
         }
 
-        // 2. Draw to Canvas
+        // 2. Draw to Canvas with orientation correction
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Canvas context failed');
         
-        ctx.drawImage(img, 0, 0, width, height);
+        // Apply orientation transformation if needed
+        if (orientation && orientation !== 1) {
+          // Create temporary canvas with original image
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = img.width;
+          tempCanvas.height = img.height;
+          const tempCtx = tempCanvas.getContext('2d');
+          if (!tempCtx) throw new Error('Temp canvas context failed');
+          
+          // Apply orientation to temp canvas
+          applyOrientation(tempCanvas, tempCtx, img, orientation);
+          
+          // Now draw the corrected image to final canvas with target dimensions
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(tempCanvas, 0, 0, width, height);
+        } else {
+          // No orientation correction needed
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+        }
 
         // 3. Smart Compression Loop
         // Start with requested quality
@@ -131,9 +160,28 @@ export async function convertImageToWebP(
   file: File,
   settings: ConversionSettings,
   onProgress?: (progress: number) => void
-): Promise<{ blob: Blob; size: number }> {
+): Promise<{ blob: Blob; size: number; orientation: number; exifRemoved: boolean }> {
   if (onProgress) onProgress(10);
-  const blob = await convertToWebP(file, settings);
+  
+  // Detect EXIF orientation if removeExif is enabled
+  let orientation = 1;
+  if (settings.removeExif) {
+    try {
+      orientation = await detectOrientation(file);
+      if (onProgress) onProgress(30);
+    } catch (error) {
+      console.warn('Failed to detect orientation, using default:', error);
+    }
+  }
+  
+  if (onProgress) onProgress(50);
+  const blob = await convertToWebP(file, settings, orientation);
   if (onProgress) onProgress(100);
-  return { blob, size: blob.size };
+  
+  return { 
+    blob, 
+    size: blob.size,
+    orientation,
+    exifRemoved: settings.removeExif
+  };
 }

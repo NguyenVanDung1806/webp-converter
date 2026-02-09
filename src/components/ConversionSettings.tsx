@@ -87,12 +87,15 @@ export function ConversionSettings({ settings, onSettingsChange }: ConversionSet
         <label className="flex items-center cursor-pointer group">
           <input
             type="checkbox"
-            checked={settings.preserveExif}
-            onChange={(e) => onSettingsChange({ preserveExif: e.target.checked })}
+            checked={settings.removeExif}
+            onChange={(e) => onSettingsChange({ removeExif: e.target.checked })}
             className="w-4 h-4 text-primary-600 bg-slate-700 border-slate-600 rounded focus:ring-primary-500 focus:ring-2"
           />
           <span className="ml-2 text-sm text-gray-300 group-hover:text-white transition-colors">
-            Preserve EXIF data
+            Remove EXIF metadata (GPS, camera info, etc.)
+          </span>
+          <span className="ml-2 text-xs text-gray-500" title="Removes location data, camera settings, and other metadata for privacy and smaller file size">
+            ℹ️
           </span>
         </label>
       </div>

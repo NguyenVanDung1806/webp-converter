@@ -1,15 +1,20 @@
 import { useState, useCallback } from 'react';
-import type { ImageFile, ConversionSettings } from '../types';
+import type { ImageFile, ConversionSettings, RenameSettings } from '../types';
 import { validateFiles } from '../utils/validator';
 import { convertImageToWebP } from '../utils/converter';
+import { applyBulkRename, getDefaultRenameSettings, isRenameEnabled } from '../utils/bulkRename';
+import { getWebPFileName } from '../utils/converter';
 
 export function useImageConverter() {
   const [images, setImages] = useState<ImageFile[]>([]);
   const [settings, setSettings] = useState<ConversionSettings>({
     quality: 80,
     maintainAspectRatio: true,
-    preserveExif: false,
+    removeExif: true, // Enabled by default for SEO
   });
+  const [renameSettings, setRenameSettings] = useState<RenameSettings>(
+    getDefaultRenameSettings()
+  );
   const [isProcessing, setIsProcessing] = useState(false);
 
   const addImages = useCallback((files: File[]) => {
@@ -23,19 +28,29 @@ export function useImageConverter() {
     }
 
     if (valid.length > 0) {
-      const newImages: ImageFile[] = valid.map((file) => ({
+      const newImages: ImageFile[] = valid.map((file, index) => ({
         id: `${file.name}-${Date.now()}-${Math.random()}`,
         file,
         preview: URL.createObjectURL(file),
         originalSize: file.size,
         status: 'pending' as const,
+        nameIndex: index + 1,
+        finalName: getWebPFileName(file.name), // Default name
+        exifRemoved: false,
       }));
 
-      setImages((prev) => [...prev, ...newImages]);
+      setImages((prev) => {
+        const combined = [...prev, ...newImages];
+        // Apply rename if enabled
+        if (isRenameEnabled(renameSettings)) {
+          return applyBulkRename(combined, renameSettings);
+        }
+        return combined;
+      });
     }
 
     return { addedCount: valid.length, errors };
-  }, []);
+  }, [renameSettings]);
 
   const removeImage = useCallback((id: string) => {
     setImages((prev) => {
@@ -69,7 +84,10 @@ export function useImageConverter() {
 
       try {
         const startTime = Date.now();
-        const { blob, size } = await convertImageToWebP(image.file, settings);
+        const { blob, size, orientation, exifRemoved } = await convertImageToWebP(
+          image.file, 
+          settings
+        );
         const processingTime = Date.now() - startTime;
 
         setImages((prev) =>
@@ -80,6 +98,8 @@ export function useImageConverter() {
                   status: 'completed' as const,
                   convertedBlob: blob,
                   convertedSize: size,
+                  exifOrientation: orientation,
+                  exifRemoved,
                 }
               : img
           )
@@ -127,9 +147,31 @@ export function useImageConverter() {
     setSettings((prev) => ({ ...prev, ...newSettings }));
   }, []);
 
+  const updateRenameSettings = useCallback((newSettings: Partial<RenameSettings>) => {
+    setRenameSettings((prev) => {
+      const updated = { ...prev, ...newSettings };
+      
+      // Re-apply rename to all images when settings change
+      setImages((currentImages) => {
+        if (isRenameEnabled(updated)) {
+          return applyBulkRename(currentImages, updated);
+        } else {
+          // Reset to original names
+          return currentImages.map(img => ({
+            ...img,
+            finalName: getWebPFileName(img.file.name),
+          }));
+        }
+      });
+      
+      return updated;
+    });
+  }, []);
+
   return {
     images,
     settings,
+    renameSettings,
     isProcessing,
     addImages,
     removeImage,
@@ -137,5 +179,6 @@ export function useImageConverter() {
     convertSingle,
     convertAll,
     updateSettings,
+    updateRenameSettings,
   };
 }

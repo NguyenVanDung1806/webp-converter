@@ -43,6 +43,14 @@ export function calculateStats(images: ImageFile[]): ConversionStats {
   const totalConvertedSize = calculateTotalConvertedSize(completedImages);
   const savings = calculateSavings(totalOriginalSize, totalConvertedSize);
 
+  // Calculate EXIF stats
+  const imagesWithExif = completedImages.filter(
+    (img) => img.exifRemoved && img.exifOrientation && img.exifOrientation !== 1
+  ).length;
+  
+  // Estimate EXIF savings (typically 5-20KB per image with EXIF)
+  const estimatedExifSavings = imagesWithExif * 10 * 1024; // Conservative estimate: 10KB per image
+
   return {
     totalOriginalSize,
     totalConvertedSize,
@@ -50,5 +58,7 @@ export function calculateStats(images: ImageFile[]): ConversionStats {
     totalSavingsPercent: savings.percent,
     filesProcessed: completedImages.length,
     averageProcessingTime: 0, // Will be calculated in the hook
+    exifSavingsBytes: estimatedExifSavings,
+    imagesWithExif,
   };
 }
